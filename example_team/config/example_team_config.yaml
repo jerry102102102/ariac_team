@@ -1,0 +1,8 @@
+# Example user config 
+
+COMPETITOR_NAME: example_team
+
+CONVEYOR_SPEED: 0.1
+CELL_FEED_RATE: 0.08
+
+SENSORS: []
