@@ -31,7 +31,7 @@ from moveit.core.robot_state import RobotState
 from moveit.core.robot_trajectory import RobotTrajectory
 
 from moveit_msgs.msg import MoveItErrorCodes
-from geometry_msgs.msg import Pose
+from geometry_msgs.msg import Pose, PoseStamped
 
 from ament_index_python.packages import get_package_share_directory
 
@@ -90,26 +90,6 @@ class RobotInterface(Node):
             
             return current_state.get_joint_group_positions(self.joint_group.name)
 
-    async def _clock_ready(self):
-        start_time = asyncio.get_running_loop().time()
-        while self.get_clock().now().nanoseconds == 0:
-            if (asyncio.get_running_loop().time() - start_time) > 5.0:
-                raise TimeoutError("Timed out waiting for ROS clock to start")
-            
-            await asyncio.sleep(0.1)
-
-    async def _state_ready(self):
-        start_time = self.get_clock().now()
-        
-        while True:
-            if any([v!=0 for v in self.joint_values]):
-                break
-
-            if (self.get_clock().now() - start_time) > Duration(seconds=5.0):
-                raise TimeoutError("Timed out waiting state")
-
-            await asyncio.sleep(0.1)
-
     async def ready(self):
         await self._clock_ready()
         await self._state_ready()
@@ -123,6 +103,34 @@ class RobotInterface(Node):
         self.planning_component.set_goal_state(configuration_name=configuration)
 
         plan = await self._plan(asf=asf, vsf=vsf)
+        return plan
+    
+    async def plan_to_pose(self, pose: Pose, linear=False, use_ompl=False, asf=1.0, vsf=1.0) -> RobotTrajectory:
+        pose_stamped = PoseStamped()
+        pose_stamped.header.frame_id = 'world'
+        pose_stamped.header.stamp = self.get_clock().now().to_msg()
+        pose_stamped.pose = pose
+
+        self.planning_component.set_goal_state(pose_stamped_msg=pose_stamped, pose_link=self.joint_group.link_model_names[-1])
+
+        if linear:
+            plan = await self._plan(planner_config="pilz_lin", asf=asf, vsf=vsf)
+        if use_ompl:
+            plan = await self._plan(planner_config="ompl_rrts", asf=asf, vsf=vsf)
+        else:
+            plan = await self._plan(planner_config="pilz_ptp", asf=asf, vsf=vsf)
+
+        return plan
+    
+    async def plan_to_joint_state(self, joint_values: list[float], asf=1.0, vsf=1.0) -> RobotTrajectory:
+        goal_state = RobotState(self.robot_model)
+        
+        goal_state.set_joint_group_positions(self.planning_group, joint_values)
+
+        self.planning_component.set_goal_state(robot_state=goal_state)
+
+        plan = await self._plan(asf=asf, vsf=vsf)
+        
         return plan
     
     async def execute(self, trajectory: RobotTrajectory, timeout: float = 60):
@@ -197,6 +205,26 @@ class RobotInterface(Node):
         self.trajectory_execution_manager.execute(_on_status)
 
         return future
+    
+    async def _clock_ready(self):
+        start_time = asyncio.get_running_loop().time()
+        while self.get_clock().now().nanoseconds == 0:
+            if (asyncio.get_running_loop().time() - start_time) > 5.0:
+                raise TimeoutError("Timed out waiting for ROS clock to start")
+            
+            await asyncio.sleep(0.1)
+
+    async def _state_ready(self):
+        start_time = self.get_clock().now()
+        
+        while True:
+            if any([v!=0 for v in self.joint_values]):
+                break
+
+            if (self.get_clock().now() - start_time) > Duration(seconds=5.0):
+                raise TimeoutError("Timed out waiting state")
+
+            await asyncio.sleep(0.1)
 
 def get_moveit_params(robot_name: Literal['inspection_robot_1', 'inspection_robot_2', 'assembly_robot_1', 'assembly_robot_2']):
     robot_config_dir = os.path.join(get_package_share_directory("example_team"), "config", "moveit", f"{robot_name}")

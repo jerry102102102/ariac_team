@@ -7,13 +7,13 @@
   </group>
   
   <!--GROUP STATES: -->
-  <group_state name="home" group="inspection_robot_1_arm">
-    <joint name="inspection_robot_1_elbow_joint" value="1.57"/>
+  <group_state name="transport" group="inspection_robot_1_arm">
+    <joint name="inspection_robot_1_elbow_joint" value="0"/>
     <joint name="inspection_robot_1_shoulder_lift_joint" value="-1.57"/>
     <joint name="inspection_robot_1_shoulder_pan_joint" value="0"/>
-    <joint name="inspection_robot_1_wrist_1_joint" value="-1.57"/>
-    <joint name="inspection_robot_1_wrist_2_joint" value="-1.57"/>
-    <joint name="inspection_robot_1_wrist_3_joint" value="1.57"/>
+    <joint name="inspection_robot_1_wrist_1_joint" value="0"/>
+    <joint name="inspection_robot_1_wrist_2_joint" value="0"/>
+    <joint name="inspection_robot_1_wrist_3_joint" value="0"/>
   </group_state>
   
   <!--DISABLE COLLISIONS: -->
