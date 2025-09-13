@@ -1,9 +1,3 @@
-import os
-
-from typing import Literal
-
-import yaml
-
 import asyncio
 
 from enum import Enum
@@ -32,8 +26,6 @@ from moveit.core.robot_trajectory import RobotTrajectory
 
 from moveit_msgs.msg import MoveItErrorCodes
 from geometry_msgs.msg import Pose, PoseStamped
-
-from ament_index_python.packages import get_package_share_directory
 
 from example_team.utils import AsyncUtils
 
@@ -78,6 +70,7 @@ class Robot(Node):
     async def ready(self):
         await self._clock_ready()
         await self._state_ready()
+        await self._controller_ready()
 
     async def plan_to_named_configuration(self, configuration: str, asf=1.0, vsf=1.0) -> RobotTrajectory:
         """Plan to a joint state specified in the srdf"""
@@ -191,30 +184,31 @@ class Robot(Node):
                 break
 
             if (self.get_clock().now() - start_time) > Duration(seconds=5.0):
-                raise TimeoutError("Timed out waiting state")
+                raise TimeoutError("Timed out waiting for state")
+
+            await asyncio.sleep(0.1)
+    
+    async def _controller_ready(self):
+        start_time = self.get_clock().now()
+        
+        while True:
+            if self.trajectory_execution_manager.is_controller_active(controller=f'/{self.robot_name}/joint_trajectory_controller'):
+                break
+
+            if (self.get_clock().now() - start_time) > Duration(seconds=5.0):
+                raise TimeoutError("Timed out waiting for controllers")
 
             await asyncio.sleep(0.1)
 
-def get_moveit_params(robot_name: Literal['inspection_robot_1', 'inspection_robot_2', 'assembly_robot_1', 'assembly_robot_2']):
-    robot_config_dir = os.path.join(get_package_share_directory("example_team"), "config", "moveit", f"{robot_name}")
 
+def get_moveit_params(robot_name):
     moveit_config = (
         MoveItConfigsBuilder(f"{robot_name}")
-        .robot_description(file_path=os.path.join(get_package_share_directory("ariac_description"), "urdf", f"{robot_name}.urdf.xacro"))
-        .robot_description_semantic(file_path=os.path.join(robot_config_dir, "robot.srdf"))
-        .robot_description_kinematics(file_path=os.path.join(robot_config_dir, "kinematics.yaml"))
-        .moveit_cpp(file_path=os.path.join(robot_config_dir, "moveit_cpp.yaml"))
-        .trajectory_execution(file_path=os.path.join(robot_config_dir, "controllers.yaml"))
-        .joint_limits(file_path=os.path.join(robot_config_dir, "joint_limits.yaml"))
-        .pilz_cartesian_limits(file_path=os.path.join(robot_config_dir, "pilz_cartesian_limits.yaml"))
+        .moveit_cpp()
         .planning_pipelines(pipelines=["pilz_industrial_motion_planner", "ompl"])
         .to_moveit_configs()
         .to_dict()
     )
-
-    # Load planner params
-    with open(os.path.join(robot_config_dir, "planner_params.yaml"), "r") as f:
-        moveit_config.update(yaml.safe_load(f))
 
     moveit_config.update({"use_sim_time": True})
 

@@ -1,0 +1,23 @@
+trajectory_execution:
+  allowed_execution_duration_scaling: 1.2
+  allowed_goal_duration_margin: 0.5
+  allowed_start_tolerance: 0.01
+
+moveit_manage_controllers: False
+moveit_controller_manager: moveit_simple_controller_manager/MoveItSimpleControllerManager
+
+moveit_simple_controller_manager:
+  controller_names:
+    - /inspection_robot_1/joint_trajectory_controller
+
+  /inspection_robot_1/joint_trajectory_controller:
+    action_ns: follow_joint_trajectory
+    type: FollowJointTrajectory
+    default: true
+    joints:
+      - inspection_robot_1_shoulder_pan_joint
+      - inspection_robot_1_shoulder_lift_joint
+      - inspection_robot_1_elbow_joint
+      - inspection_robot_1_wrist_1_joint
+      - inspection_robot_1_wrist_2_joint
+      - inspection_robot_1_wrist_3_joint

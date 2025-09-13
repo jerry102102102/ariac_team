@@ -1,0 +1,25 @@
+moveit_setup_assistant_config:
+  urdf:
+    package: ariac_description
+    relative_path: urdf/inspection_robot_1.urdf.xacro
+  srdf:
+    relative_path: config/inspection_robot_1.srdf
+  package_settings:
+    author_name: Justin Albrecht
+    author_email: justin.albrecht@nist.gov
+    generated_timestamp: 1743619528
+  control_xacro:
+    command:
+      - position
+    state:
+      - position
+      - velocity
+  modified_urdf:
+    xacros:
+      - control_xacro
+  control_xacro:
+    command:
+      - position
+    state:
+      - position
+      - velocity

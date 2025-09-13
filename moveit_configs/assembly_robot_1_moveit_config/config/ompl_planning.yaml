@@ -1,0 +1,22 @@
+planning_plugins:
+  - ompl_interface/OMPLPlanner
+
+request_adapters:
+  - default_planning_request_adapters/ResolveConstraintFrames
+  - default_planning_request_adapters/ValidateWorkspaceBounds
+  - default_planning_request_adapters/CheckStartStateBounds
+  - default_planning_request_adapters/CheckStartStateCollision
+response_adapters:
+  - default_planning_response_adapters/AddTimeOptimalParameterization
+  - default_planning_response_adapters/ValidateSolution
+  - default_planning_response_adapters/DisplayMotionPath
+
+planner_configs:
+  RRTstar:
+    type: geometric::RRTstar
+    range: 0.1  # Max motion added to tree. ==> maxDistance_ default: 0.0, if 0.0, set on setup()
+
+assembly_robot_1_arm:
+  planner_configs:
+    - RRTstar
+  longest_valid_segment_fraction: 0.01
