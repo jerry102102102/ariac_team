@@ -45,6 +45,9 @@ async def run():
             report = InspectionReport(passed=True)
             await environment.inspection_conveyor.submit_inspection_report(report)
 
+        # Wait for las cell to pass through inspection door
+        await AsyncUtils.await_for_duration(environment.get_clock(), Duration(seconds=0.7 / environment.inspection_conveyor.speed)) 
+
         await environment.inspection_conveyor.stop_cell_feed()
 
         await environment.competition.end(shutdown=False)      
