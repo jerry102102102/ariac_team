@@ -1,6 +1,12 @@
 COMPETITOR_NAME: example_team
 
 CONVEYOR_SPEED: 0.1
-CELL_FEED_RATE: 0.08
+CELL_FEED_RATE: 0.1
 
-SENSORS: []
+SENSORS:
+  - NAME: inspection_breakbeam
+    TYPE: break_beam
+    POSE:
+      XYZ: [0.6, 0.95, 0.44]
+      RPY: [0.0, 0.0, pi/2]
+    UPDATE_RATE: 10

@@ -4,6 +4,7 @@ from rclpy.time import Time, Duration
 from rclpy.client import Client
 from rclpy.task import Future as RosFuture
 from rclpy.action import ActionClient
+from rclpy.executors import Executor
 
 class AsyncUtils:
     @staticmethod
@@ -70,3 +71,9 @@ class AsyncUtils:
 
         ros_future.add_done_callback(_on_ros_future_complete)
         return asyncio_future
+    
+    @staticmethod
+    async def spin_executor(executor: Executor, shutdown_event: asyncio.Event):
+        while not shutdown_event.is_set():
+            executor.spin_once(timeout_sec=1)
+            await asyncio.sleep(0.0)
