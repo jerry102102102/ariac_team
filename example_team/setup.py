@@ -35,7 +35,8 @@ setup(
     entry_points={
         'console_scripts': [
             'move_robots = example_team.examples.move_robots:main',
-            'dummy_inspection = example_team.examples.dummy_inspection:main'
+            'dummy_inspection = example_team.examples.dummy_inspection:main',
+            'pick_from_tester = example_team.examples.pick_from_tester:main'
         ],
     },
 )

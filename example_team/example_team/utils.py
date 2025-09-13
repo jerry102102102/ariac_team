@@ -1,10 +1,15 @@
 import asyncio
+
 from rclpy.clock import Clock
 from rclpy.time import Time, Duration
 from rclpy.client import Client
 from rclpy.task import Future as RosFuture
 from rclpy.action import ActionClient
 from rclpy.executors import Executor
+
+from tf2_ros import Buffer
+
+from geometry_msgs.msg import TransformStamped, Quaternion
 
 class AsyncUtils:
     @staticmethod
@@ -73,7 +78,15 @@ class AsyncUtils:
         return asyncio_future
     
     @staticmethod
+    async def get_tf_transform(buffer: Buffer, target: str, source: str, time=Time(), timeout=5) -> TransformStamped:
+        return await asyncio.to_thread(buffer.lookup_transform, target, source, time, timeout=Duration(seconds=timeout))
+    
+    @staticmethod
     async def spin_executor(executor: Executor, shutdown_event: asyncio.Event):
         while not shutdown_event.is_set():
             executor.spin_once(timeout_sec=1)
             await asyncio.sleep(0.0)
+
+def quaternion_from_list(q: tuple[float, float, float, float]):
+    return Quaternion(x=q[0], y=q[1], z=q[2], w=q[3])
+

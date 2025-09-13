@@ -1,7 +1,7 @@
 import asyncio
 
 import rclpy
-from rclpy.executors import Executor, MultiThreadedExecutor
+from rclpy.executors import MultiThreadedExecutor
 
 from example_team.environment_interface import Environment
 from example_team.robot_interface import Robot
