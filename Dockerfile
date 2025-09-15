@@ -15,7 +15,6 @@ COPY ./ $TEAM_WS/src/
 # Update apt and install any OS dependencies needed for rosdep
 RUN apt-get update && \
     rosdep update && \
-    source /ariac_ws/install/setup.bash && \
     rosdep install --from-paths src --ignore-src -r -y
 
 # RUN pip3 install -r $TEAM_WS/src/requirements.txt --break-system-packages

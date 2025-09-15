@@ -1,12 +1,16 @@
-from typing import cast 
+from typing import cast, Any
 
 import asyncio
 
 from rclpy.node import Node
+from rclpy.task import Future
 from rclpy.parameter import Parameter
 from rclpy.time import Duration
+from rclpy.action import ActionClient
+from rclpy.action.client import ClientGoalHandle, GoalStatus
 
 from ariac_interfaces.msg import (
+    AgvStations,
     CompetitionStates,
     CompetitionStatus,
     CompetitionTime,
@@ -24,6 +28,8 @@ from ariac_interfaces.srv import (
     SubmitInspectionReport
 )
 
+from ariac_interfaces.action import MoveAgv
+
 from example_team.utils import AsyncUtils
 
 class Environment(Node):
@@ -35,11 +41,14 @@ class Environment(Node):
         self.competition = Competition(self)
         self.inspection_conveyor = InspectionConveyor(self)
 
+        self.agvs: dict[int, AGV] = {i: AGV(self, i) for i in (1,2,3)}
+
 class Competition:
     def __init__(self, node: Node):
         self._node = node
         self._start_srv = self._node.create_client(Trigger, '/start_competition')
         self._end_srv = self._node.create_client(EndCompetition, '/end_competition')
+        self._submit_kit_srv = self._node.create_client(Trigger, '/submit_kitting_order')
         
         self._state: int | None = None
         self._time: CompetitionTime | None = None
@@ -88,6 +97,17 @@ class Competition:
 
         if not response.success:
             raise RuntimeError(response.message)
+        
+    async def submit_kit(self) -> bool:
+        await AsyncUtils.await_service_ready(self._submit_kit_srv)
+
+        result = await AsyncUtils.await_service_response(self._submit_kit_srv, Trigger.Request())
+        
+        response = cast(Trigger.Response, result)
+
+        self._node.get_logger().info(f"Kit submission response: {response.message}")
+
+        return response.success
     
     def _status_cb(self, msg: CompetitionStatus):
         self._state = msg.competition_state
@@ -175,3 +195,58 @@ class InspectionConveyor:
     def _cell_feeder_status_cb(self, msg: CellFeederStatus):
         self._cell_type = msg.cell_type
         self._feed_rate = msg.feed_rate
+
+class AGV:
+    def __init__(self, node: Node, agv: int):
+        self.node = node
+
+        action_name = f'agv{agv}/move'
+        self.action_client: ActionClient = ActionClient(self.node, MoveAgv, action_name)
+
+        self._done_future: asyncio.Future
+
+        self._station: int = AgvStations.INSPECTION
+    
+    @property
+    def station(self) -> int:
+        return self._station
+
+    async def move(self, station: int):
+        await AsyncUtils.await_action_ready(self.action_client)
+
+        goal_msg: MoveAgv.Goal = MoveAgv.Goal()
+        goal_msg.station_id = station
+
+        self._holding_object = False
+
+        self._done_future = asyncio.get_event_loop().create_future()
+
+        goal_future = self.action_client.send_goal_async(goal_msg)
+        goal_future.add_done_callback(self._goal_response_callback)
+
+        await self._done_future
+
+        if (exception := self._done_future.exception()) is not None:
+            raise exception
+
+    def _goal_response_callback(self, future: Any) -> None:
+        goal_handle = cast(ClientGoalHandle, future.result())
+
+        if not goal_handle.accepted:
+            self._done_future.set_exception(RuntimeError('Gripper goal was not accepted.'))
+            return
+
+        result_future: Future  = goal_handle.get_result_async()
+        result_future.add_done_callback(self._result_callback)
+
+    def _result_callback(self, result_future: Any) -> None:
+        status = cast(int, result_future.result().status)
+        result = cast(MoveAgv.Result, result_future.result().result)
+        
+        self._station = result.status.station_id
+
+        if status == GoalStatus.STATUS_SUCCEEDED:
+            self._done_future.set_result(True)
+        else:
+            self._done_future.set_exception(RuntimeError(f'Agv move failed with status {status}'))
+        
