@@ -30,10 +30,11 @@ async def run():
         environment.get_logger().info("Starting competition")
         await environment.competition.start()
 
-        environment.get_logger().info("Starting cell feed")
+        environment.get_logger().info("Starting cell feed with Li-Ion cells")
         await environment.inspection_conveyor.start_cell_feed(CellTypes.LI_ION)
 
-        for _ in range(5):
+        num_cells = 8
+        for i in range(num_cells):
             cell = await sensors.inspection_bb.cell_queue.get()
 
             environment.get_logger().info(f"Cell detected at {cell.detection_time.nanoseconds/1E9} seconds")
@@ -45,7 +46,11 @@ async def run():
             report = InspectionReport(passed=True)
             await environment.inspection_conveyor.submit_inspection_report(report)
 
-        # Wait for las cell to pass through inspection door
+            if i == (num_cells/2 - 1):
+                environment.get_logger().info("Starting cell feed with NiMH cells")
+                await environment.inspection_conveyor.start_cell_feed(CellTypes.NIMH)
+
+        # Wait for last cell to pass through inspection door
         await AsyncUtils.await_for_duration(environment.get_clock(), Duration(seconds=0.7 / environment.inspection_conveyor.speed)) 
 
         await environment.inspection_conveyor.stop_cell_feed()
