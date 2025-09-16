@@ -2,7 +2,7 @@
 # Team overlay image extending ARIAC base
 # ================================================================
 
-FROM ariac:latest
+FROM nistariac/ariac2025:latest
 
 # Create a new overlay workspace
 ENV TEAM_WS=/team_ws
