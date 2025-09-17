@@ -3,7 +3,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: example_team_nvidia
+    container_name: example_team
     runtime: nvidia
     environment:
       - DISPLAY=${DISPLAY}
@@ -39,6 +39,30 @@ services:
     volumes:
       - /tmp/.X11-unix:/tmp/.X11-unix:rw
       - ${XAUTHORITY}:${XAUTHORITY}
+      - ./:/team_ws/src/
+    privileged: true
+    stdin_open: true
+    tty: true
+    ports:
+      - "8080:8080"
+  ariac_wsl:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: example_team
+    runtime: nvidia
+    environment:
+      - DISPLAY=${DISPLAY}
+      - QT_X11_NO_MITSHM=1
+      - NVIDIA_VISIBLE_DEVICES=all
+      - NVIDIA_DRIVER_CAPABILITIES=graphics,display,utility
+      - XDG_RUNTIME_DIR=${XDG_RUNTIME_DIR}
+      - __NV_PRIME_RENDER_OFFLOAD=1
+      - __GLX_VENDOR_LIBRARY_NAME=nvidia
+      - XAUTHORITY=${XAUTHORITY}
+    volumes:
+      - /tmp/.X11-unix:/tmp/.X11-unix:rw
+      - /mnt/wslg/.X11-unix:/tmp/.X11-unix
       - ./:/team_ws/src/
     privileged: true
     stdin_open: true
