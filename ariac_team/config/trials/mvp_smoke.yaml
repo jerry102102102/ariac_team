@@ -1,0 +1,13 @@
+##
+# mvp_smoke.yaml
+# ---------------
+# 中文說明：完整流程（輸送帶 → 測試器 → AGV → Shipping）測試用 trial。
+# 只產生一個 kit，所有電池皆為良品，方便驗證端到端流程。
+##
+
+ID: MVP_SMOKE
+SEED: 7            # 固定亂數種子，確保重現性
+DEFECT_RATE: 0.0   # MVP 先不產生瑕疵
+TIME_LIMIT: 300    # 單 kit 給 5 分鐘充裕時間
+NUM_KITS: 1
+NUM_MODULES: 0     # 任務一專用，暫不測試模組組裝

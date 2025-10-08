@@ -1,0 +1,13 @@
+##
+# conveyor_to_tester.yaml
+# -----------------------
+# 中文說明：專門測試「輸送帶 → 測試儀」流程的極簡 trial。
+# 只會出一顆良品電池，方便調整 Robot1 的抓取邏輯。
+##
+
+ID: MVP_CONVEYOR_TUTORIAL
+SEED: 2            # 與完整流程不同的亂數種子
+DEFECT_RATE: 0.0
+TIME_LIMIT: 180    # 保留 3 分鐘給手動調試
+NUM_KITS: 1
+NUM_MODULES: 0

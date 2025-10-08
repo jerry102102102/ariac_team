@@ -1,0 +1,13 @@
+##
+# tester_to_agv.yaml
+# -------------------
+# 中文說明：鎖定測試儀 → AGV 的搬運段落。
+# 請先將電池手動放在測試儀，再啟動此 trial 觀察 Robot2 動作。
+##
+
+ID: MVP_TESTER_HANDOFF
+SEED: 3
+DEFECT_RATE: 0.0
+TIME_LIMIT: 180
+NUM_KITS: 1
+NUM_MODULES: 0
