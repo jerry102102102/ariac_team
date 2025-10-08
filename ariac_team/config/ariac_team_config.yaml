@@ -1,0 +1,56 @@
+##
+# ariac_team_config.yaml
+# ----------------------
+# 中文說明：這份檔案描述我們隊伍的環境設定（輸送帶參數、感測器配置）。
+# 主要依據官方文件的 Team Config 規格編寫，方便在 Docker/launch 時直接載入。
+##
+
+# 隊伍名稱會出現在競賽排名與日誌中
+COMPETITOR_NAME: ariac_team
+
+# 檢測輸送帶與 cell feeder 的速度參數（單位：m/s）
+# MVP 先採用保守值，後續可視情況調整
+CONVEYOR_SPEED: 0.05
+CELL_FEED_RATE: 0.08
+
+# 感測器配置：列出每個感測器的名稱、型別與姿態
+SENSORS:
+  # 檢測輸送帶入口的 break beam，用於偵測電池進場
+  - NAME: inspection_breakbeam
+    TYPE: break_beam
+    POSE:
+      XYZ: [0.55, 0.95, 0.44]
+      RPY: [0.0, 0.0, pi/2]
+    UPDATE_RATE: 20
+
+  # 檢測輸送帶上方的 RGBD，相機提供外觀檢測與定位資訊
+  - NAME: inspection_rgbd
+    TYPE: rgbd_camera
+    POSE:
+      XYZ: [0.0, 0.95, 1.35]
+      RPY: [-1.57, 0.0, pi]
+    UPDATE_RATE: 15
+
+  # 測試儀上方的 RGBD 相機，可協助 Robot2 對位
+  - NAME: tester_rgbd
+    TYPE: rgbd_camera
+    POSE:
+      XYZ: [0.8, 0.4, 1.25]
+      RPY: [-1.57, 0.0, pi/2]
+    UPDATE_RATE: 15
+
+  # AGV 上方的 RGBD 相機，用於確認槽位是否放滿
+  - NAME: agv_station_rgbd
+    TYPE: rgbd_camera
+    POSE:
+      XYZ: [1.6, 0.0, 1.35]
+      RPY: [-1.57, 0.0, 0.0]
+    UPDATE_RATE: 10
+
+  # Shipping 區的 break beam，用於確認 AGV 進場
+  - NAME: shipping_breakbeam
+    TYPE: break_beam
+    POSE:
+      XYZ: [3.2, -1.45, 0.35]
+      RPY: [0.0, 0.0, 0.0]
+    UPDATE_RATE: 10

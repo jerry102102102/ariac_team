@@ -1,0 +1,13 @@
+##
+# shipping_submit.yaml
+# --------------------
+# 中文說明：專注於 AGV 開往 shipping 並提交 kit 的流程。
+# 可先以手動方式把四顆電池放進 AGV，再啟動此 trial 驗證服務呼叫。
+##
+
+ID: MVP_SHIPPING_ONLY
+SEED: 4
+DEFECT_RATE: 0.0
+TIME_LIMIT: 240
+NUM_KITS: 1
+NUM_MODULES: 0

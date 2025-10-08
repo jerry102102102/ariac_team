@@ -253,3 +253,41 @@
 - [ ] 文件/影片（若需）  
 - [ ] Lint/Format（flake8/black）  
 - [ ] 最終提交檢查：Dockerfile/Config/Launch/README 等完整
+
+## MVP Smoke-Test Package
+
+本倉庫新增 `ariac_team` ROS 2 套件，整理任務一 MVP 的骨架：
+- `ariac_team/nodes/mvp_coordinator.py` 會啟動簡化的階段式 pipeline，串接「啟動競賽 → 輸送帶出料 → Robot1 放置測試儀 → Robot2 放置 AGV → 提交 kit → 結束競賽」。
+- `ariac_team/pipeline` 定義抽象 Stage 與共用 Context，讓每個子任務可以獨立開發與測試。
+- `ariac_team/config/trials/` 提供 smoke test 及子任務專屬 trial（`mvp_smoke`、`conveyor_to_tester`、`tester_to_agv`、`shipping_submit`），後續可於 ARIAC App 或 `ros2 launch` 單獨載入。
+
+### 設定檔說明（Team Config & Trials）
+
+- `config/ariac_team_config.yaml`
+  - **輸送帶參數：** `CONVEYOR_SPEED=0.05`、`CELL_FEED_RATE=0.08`，以保守速度確保 MVP 階段穩定。
+  - **感測器配置：**
+    - `inspection_breakbeam`：輸送帶入口偵測 Cell 到達。
+    - `inspection_rgbd`：輸送帶上方 RGBD，供外觀檢測/定位使用。
+    - `tester_rgbd`：測試儀上方 RGBD，協助 Robot2 精準抓取。
+    - `agv_station_rgbd`：AGV 上方 RGBD，確認槽位與極性。
+    - `shipping_breakbeam`：Shipping 區域入口偵測 AGV 進場。
+- `config/trials/*.yaml`
+  - `mvp_smoke.yaml`：完整快樂路徑，一個 kit，所有 cell 為良品。
+  - `conveyor_to_tester.yaml`：鎖定 Robot1（輸送帶 → 測試儀）的調試情境。
+  - `tester_to_agv.yaml`：鎖定 Robot2（測試儀 → AGV）的調試情境。
+  - `shipping_submit.yaml`：驗證 AGV 前往 Shipping 並提交 kit 的服務流程。
+
+### 執行方式
+
+1. 建置容器（第一次或更新依賴時）：
+   ```bash
+   docker build -t ariac_team:mvp .
+   ```
+2. 啟動 smoke test：
+   ```bash
+   docker run --rm -it --gpus all -p 5900:5900 ariac_team:mvp bash -lc /usr/local/bin/start_vnc.sh
+   # 另一個終端，於容器內：
+   ros2 launch ariac_team mvp_smoke.launch.py
+   ```
+   或使用 `docker/start_mvp.sh` 一鍵啟動（含 VNC 環境）。
+> MVP 假設所有電池皆為良品（`TesterBypassStage`），後續可逐步替換 Stage 實作以引入真正的檢測與回收流程。
