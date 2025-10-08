@@ -75,9 +75,14 @@ class PlaceCellOnTesterStage(TaskStage):
         robot = context.robots['inspection_robot_1']
         context.coordinator.get_logger().info(
             f'Commanding {robot.description} to load tester {self._tester_id}')
-        await robot.ensure_ready()
-        # 中文說明：實際執行取放，細節封裝在 Robot Handle 中。
-        await robot.place_cell_on_tester(self._tester_id)
+        try:
+            await robot.ensure_ready()
+            # 中文說明：實際執行取放，細節封裝在 Robot Handle 中。
+            await robot.place_cell_on_tester(self._tester_id)
+        except Exception as exc:  # noqa: BLE001 - bubble up stage failure
+            message = f'Failed to place cell onto tester {self._tester_id}: {exc}'
+            context.coordinator.get_logger().error(message)
+            return StageResult.failure(message)
         return StageResult.success('Cell placed onto tester', tester=self._tester_id)
 
 
@@ -114,9 +119,17 @@ class PlaceCellOnAgvStage(TaskStage):
         context.coordinator.get_logger().info(
             f'Commanding {robot.description} to move cell from tester {self._tester_id} '
             f'to AGV {self._agv_id}')
-        await robot.ensure_ready()
-        # 中文說明：利用 Handle 實際呼叫行為，包含移動與夾持。
-        await robot.load_cell_to_agv(tester_id=self._tester_id, agv_id=self._agv_id)
+        try:
+            await robot.ensure_ready()
+            # 中文說明：利用 Handle 實際呼叫行為，包含移動與夾持。
+            await robot.load_cell_to_agv(tester_id=self._tester_id, agv_id=self._agv_id)
+        except Exception as exc:  # noqa: BLE001 - bubble up stage failure
+            message = (
+                f'Failed to place cell from tester {self._tester_id} '
+                f'onto AGV {self._agv_id}: {exc}'
+            )
+            context.coordinator.get_logger().error(message)
+            return StageResult.failure(message)
         return StageResult.success('Cell placed on AGV', tester=self._tester_id, agv=self._agv_id)
 
 

@@ -137,12 +137,23 @@ def main() -> None:
 
     executor.add_node(coordinator)
     executor.add_node(coordinator.environment)
+    robot_nodes = []
+    for handle in coordinator.robots.values():
+        for node in handle.nodes():
+            executor.add_node(node)
+            robot_nodes.append(node)
 
     try:
         executor.spin()
     finally:
         # 中文說明：確保離開時釋放 ROS 資源，避免下次啟動殘留。
+        for node in robot_nodes:
+            executor.remove_node(node)
+        executor.remove_node(coordinator.environment)
+        executor.remove_node(coordinator)
         executor.shutdown()
+        for handle in coordinator.robots.values():
+            handle.destroy()
         coordinator.environment.destroy_node()
         coordinator.destroy_node()
         rclpy.shutdown()
