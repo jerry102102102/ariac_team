@@ -1,20 +1,24 @@
 services:
   ariac:
+    platform: linux/amd64         
     build:
       context: .
       dockerfile: Dockerfile
     container_name: example_team
     ports:
       - "8080:8080"
+      - "127.0.0.1:5902:5900"
     volumes:
       - /tmp/.X11-unix:/tmp/.X11-unix:rw
       - ./:/team_ws/src/
     environment:
-      - DISPLAY=${DISPLAY}
+     - DISPLAY=:1
+     - QT_X11_NO_MITSHM=1
     stdin_open: true
     tty: true
     
   ariac_nvidia:
+    platform: linux/amd64
     extends: ariac
     runtime: nvidia
     environment:
