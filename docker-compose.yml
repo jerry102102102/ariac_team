@@ -10,7 +10,10 @@ services:
       - "127.0.0.1:5902:5900"
     volumes:
       - /tmp/.X11-unix:/tmp/.X11-unix:rw
-      - ./:/team_ws/src/
+      - ./src:/team_ws/src/
+      - ./moveit_configs:/team_ws/moveit_configs
+      - ./docs:/team_ws/docs
+      - ./docker:/team_ws/docker
     environment:
      - DISPLAY=:1
      - QT_X11_NO_MITSHM=1

@@ -13,8 +13,11 @@ ENV TEAM_WS=/team_ws
 RUN mkdir -p $TEAM_WS/src
 WORKDIR $TEAM_WS
 
-# Copy team packages into the overlay workspace
-COPY ./ $TEAM_WS/src/
+# Copy the ROS 2 packages and supporting assets into the overlay workspace
+COPY ./src/ $TEAM_WS/src/
+COPY ./moveit_configs/ $TEAM_WS/moveit_configs/
+COPY ./docs/ $TEAM_WS/docs/
+COPY ./docker/ $TEAM_WS/docker/
 
 # Update apt and install any OS dependencies needed for rosdep
 RUN apt-get update && \
