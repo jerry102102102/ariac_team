@@ -10,7 +10,7 @@ from __future__ import annotations
 import asyncio
 from ariac_interfaces.msg import CellTypes
 
-from .base import StageContext, StageResult, TaskStage
+from .base import StageContext, StageResult, StageStatus, TaskStage
 
 
 class CompetitionBootStage(TaskStage):
@@ -58,6 +58,81 @@ class ConveyorPrimeStage(TaskStage):
         # 中文說明：停帶避免機械臂追逐移動目標。
         await conveyor.stop_cell_feed()
         return StageResult.success('Cell feed primed', cell_type=self._cell_type)
+
+
+class AssembleKitStage(TaskStage):
+    """Aggregate stage that repeats the conveyor → tester → AGV flow."""
+
+    def __init__(
+        self,
+        *,
+        cell_type: int,
+        tester_id: int,
+        agv_id: int,
+        cells_required: int,
+    ) -> None:
+        super().__init__('assemble_kit')
+        self._cell_type = cell_type
+        self._tester_id = tester_id
+        self._agv_id = agv_id
+        self._cells_required = cells_required
+
+    async def execute(self, context: StageContext) -> StageResult:
+        required = max(int(self._cells_required), 0)
+        context.params['cells_required'] = required
+        loaded = int(context.params.get('cells_loaded', 0))
+
+        if required <= 0:
+            context.params['cells_loaded'] = 0
+            context.coordinator.get_logger().warning(
+                'AssembleKitStage: no cells requested, skipping kit assembly'
+            )
+            return StageResult.skipped('No cells requested for kit assembly', required=required)
+
+        for index in range(loaded, required):
+            cell_number = index + 1
+            context.coordinator.get_logger().info(
+                f'Assembling cell {cell_number}/{required} for AGV {self._agv_id}'
+            )
+            sub_stages = (
+                ConveyorPrimeStage(cell_type=self._cell_type),
+                PlaceCellOnTesterStage(tester_id=self._tester_id),
+                TesterBypassStage(),
+                PlaceCellOnAgvStage(tester_id=self._tester_id, agv_id=self._agv_id),
+            )
+            for stage in sub_stages:
+                context.coordinator.get_logger().info(
+                    f'AssembleKitStage running sub-stage: {stage.name}'
+                )
+                result = await stage.run(context)
+                if result.status is not StageStatus.SUCCESS:
+                    message = (
+                        f'Stage {stage.name} returned {result.status.name} '
+                        f'while assembling cell {cell_number}/{required}: {result.message}'
+                    )
+                    if result.status is StageStatus.FAILURE:
+                        return StageResult.failure(
+                            message,
+                            stage=stage.name,
+                            cell_index=index,
+                            **result.payload,
+                        )
+                    return StageResult.skipped(
+                        message,
+                        stage=stage.name,
+                        cell_index=index,
+                        **result.payload,
+                    )
+
+            loaded = cell_number
+            context.params['cells_loaded'] = loaded
+
+        return StageResult.success(
+            f'Loaded {loaded}/{required} cells onto AGV {self._agv_id}',
+            loaded=loaded,
+            required=required,
+            agv=self._agv_id,
+        )
 
 
 class PlaceCellOnTesterStage(TaskStage):
@@ -146,6 +221,22 @@ class SubmitKitStage(TaskStage):
 
     async def execute(self, context: StageContext) -> StageResult:
         env = context.environment
+        required = int(context.params.get('cells_required', 0))
+        loaded = int(context.params.get('cells_loaded', 0))
+
+        if required > 0 and loaded < required:
+            message = (
+                f'AGV {self._agv_id} is not ready for submission: '
+                f'{loaded}/{required} cells loaded'
+            )
+            context.coordinator.get_logger().error(message)
+            return StageResult.failure(
+                message,
+                agv=self._agv_id,
+                loaded=loaded,
+                required=required,
+            )
+
         context.coordinator.get_logger().info(
             f'Sending AGV {self._agv_id} to the shipping station')
         await env.send_agv_to_shipping(self._agv_id)
@@ -154,8 +245,25 @@ class SubmitKitStage(TaskStage):
         success = await env.competition.submit_kit()
         if not success:
             # 中文說明：若提交失敗（例如 kit 未滿四顆），立即回報失敗方便除錯。
-            return StageResult.failure('Kit submission failed')
-        return StageResult.success('Kit successfully submitted', agv=self._agv_id)
+            context.coordinator.get_logger().error(
+                'Kit submission failed after reaching shipping station'
+            )
+            return StageResult.failure(
+                'Kit submission failed',
+                agv=self._agv_id,
+                loaded=loaded,
+                required=required,
+            )
+        context.coordinator.get_logger().info(
+            f'Kit submission confirmed for AGV {self._agv_id} '
+            f'with {loaded}/{required} cells'
+        )
+        return StageResult.success(
+            'Kit successfully submitted',
+            agv=self._agv_id,
+            loaded=loaded,
+            required=required,
+        )
 
 
 class EndCompetitionStage(TaskStage):
