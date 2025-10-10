@@ -38,6 +38,7 @@ class MvpCoordinator(Node):
         self.declare_parameter('agv_id', 1)
         self.declare_parameter('cell_type', 'LI_ION')
         self.declare_parameter('feed_wait_s', 2.0)
+        self.declare_parameter('cells_per_kit', 4)
 
         self.environment = AriacEnvironment()
         self.robots: Dict[str, InspectionRobot1Handle | InspectionRobot2Handle] = {
@@ -57,14 +58,17 @@ class MvpCoordinator(Node):
         cell_type = self._resolve_cell_type(self.get_parameter('cell_type').get_parameter_value().string_value)
         tester_id = int(self.get_parameter('tester_id').value)
         agv_id = int(self.get_parameter('agv_id').value)
+        cells_per_kit = int(self.get_parameter('cells_per_kit').value)
 
         self.pipeline = Pipeline([
             # 中文說明：依照任務流程建立 Stage 清單，之後會線性執行。
             stages.CompetitionBootStage(),
-            stages.ConveyorPrimeStage(cell_type=cell_type),
-            stages.PlaceCellOnTesterStage(tester_id=tester_id),
-            stages.TesterBypassStage(),
-            stages.PlaceCellOnAgvStage(tester_id=tester_id, agv_id=agv_id),
+            stages.AssembleKitStage(
+                cell_type=cell_type,
+                tester_id=tester_id,
+                agv_id=agv_id,
+                cells_required=cells_per_kit,
+            ),
             stages.SubmitKitStage(agv_id=agv_id),
             stages.EndCompetitionStage(),
         ])
@@ -113,7 +117,11 @@ class MvpCoordinator(Node):
             coordinator=self,
             environment=self.environment,
             robots=self.robots,
-            params={'feed_wait_s': float(self.get_parameter('feed_wait_s').value)}
+            params={
+                'feed_wait_s': float(self.get_parameter('feed_wait_s').value),
+                'cells_required': cells_per_kit,
+                'cells_loaded': 0,
+            }
         )
 
         results = await self.pipeline.run(context)
